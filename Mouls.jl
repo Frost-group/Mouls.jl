@@ -2,11 +2,11 @@ using Statistics
 using LinearAlgebra
 
 """
-    PeptideSynthesisPredictor
+    Mouls
 
-A module for predicting synthesis of peptide sequences using coupling tables.
+Predict synthesis of peptide sequences from Monte-Carlo sampling of coupling probabilities.
 """
-module PeptideSynthesisPredictor
+module Mouls 
 
 using Distributions
 using Printf
@@ -93,7 +93,7 @@ function generate_synthesised_sequence(peptide::String, coupling_table::Coupling
     
     for (i, aa) in enumerate(peptide |> reverse) # reverse for N-to-C actual synthesis order
         if rand() < get_coupling_prob(coupling_table, aa, aa)
-            push!(result, aa)
+            push!(result, aa) # coupling successful!
         end
     end
     
@@ -116,10 +116,10 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
     histogram = calculate_histogram(peptide, coupling_table, 
                                   num_simulations=num_simulations)
     
-    # Sort by frequency
+    # Sort by frequency (yield)
     sorted_sequences = sort(collect(histogram), by=x->x[2], rev=true)
     
-    println("\nTop 10 most likely synthesised sequences:")
+    println("\nTop 10 yields:")
     println("Sequence\t\tCount\tProbability")
     println("-" ^ 50)
     
@@ -132,7 +132,7 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
         total_prob += prob
     end
 
-    println("Total probability of synthesis: $(round(total_prob, digits=4))")
+    println("Total yield / probability of synthesis: $(round(total_prob, digits=4))")
     
     return histogram
 end
@@ -162,9 +162,8 @@ contextfree_couplings = Dict(
 )
 
 function create_coupling_table()
-    # Standard amino acids
-    amino_acids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 
-                   'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
+    # Standard amino acids; used to order matrix indices, dereferenced by a lookup
+    amino_acids = "ARNDCQEGHILKMFPSTWYV" |> collect 
     n = length(amino_acids)
     coupling_matrix = zeros(n, n)
 
@@ -184,10 +183,10 @@ end # module
 
 # Example usage
 if abspath(PROGRAM_FILE) == @__FILE__
-    using .PeptideSynthesisPredictor
+    using .Mouls
     
     # Create example coupling table
-    coupling_table = PeptideSynthesisPredictor.create_coupling_table()
+    coupling_table = Mouls.create_coupling_table()
     
     println("CouplingTable structure:")
     println(coupling_table)
@@ -197,8 +196,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
 
     # Predict synthesis
     result = predict_synthesis(KB09, coupling_table, num_simulations=1_000_000)
-    
     println("\nTotal unique sequences generated: $(length(result))")
-    println("Total probability of synthesis: $(sum(values(result)))")
-
 end 
+
