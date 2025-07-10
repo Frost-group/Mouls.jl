@@ -92,6 +92,13 @@ function generate_synthesised_sequence(peptide::String, coupling_table::Coupling
     result = Char[]
     
     for (i, aa) in enumerate(peptide |> reverse) # reverse for N-to-C actual synthesis order
+        
+        # TRUNCATION
+        if rand()>1.0-i*0.005 # from Young1990, about a 1% chance of 'incomplete' with each additional aa
+            break
+        end
+
+        # COUPLING EFFICIENCY
         if rand() < get_coupling_prob(coupling_table, aa, aa)
             push!(result, aa) # coupling successful!
         end
@@ -107,7 +114,7 @@ end
 Main function to predict synthesis of peptide sequence.
 """
 function predict_synthesis(peptide::String, coupling_table::CouplingTable; 
-                         num_simulations::Int=1000_000)
+                         num_simulations::Int=1_000_000)
     
     println("Predicting synthesis for peptide: $peptide")
     println("Simulations: $num_simulations")
@@ -128,7 +135,7 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
     total_prob = 0.0
     for (sequence, count) in sorted_sequences[1:min(10, length(sorted_sequences))]
         prob = count / total_count
-        println("$sequence\t\t$count\t$(round(prob, digits=4))")
+        println("$(lpad(sequence,length(peptide)))\t\t$count\t$(round(prob, digits=4))")
         total_prob += prob
     end
 
@@ -161,6 +168,31 @@ contextfree_couplings = Dict(
     'V' => 0.99   # Valine
 )
 
+# Young1990 - Figure 2; high incomplete
+contextfree_couplings_Young1990 = Dict(
+    'H' => 0.75,  # Histidine
+    'T' => 0.86,  # Threonine
+    'R' => 0.87,  # Arginine
+    'V' => 0.87,   # Valine
+    'I' => 0.87,  # Isoleucine
+    'Q' => 0.90,  # Glutamine
+    'Y' => 0.91,  # Tyrosine - phenol group ?
+    'N' => 0.92,  # Asparagine
+    'W' => 0.92,  # Tryptophan - indole ring sensitive ?
+    'E' => 0.92,  # Glutamic acid
+    'P' => 0.92,  # Proline - ring strain ?
+    'K' => 0.94,  # Lysine
+    'L' => 0.94,  # Leucine
+    'S' => 0.94,  # Serine
+    'F' => 0.94,  # Phenylalanine
+    'A' => 0.94,  # Alanine
+    'C' => 0.95,  # Cysteine - oxidation ?
+    'M' => 0.95,  # Methionine - oxidation sensitive ?
+    'D' => 0.97,  # Aspartic acid
+    'G' => 0.97  # Glycine
+)
+
+
 function create_coupling_table()
     # Standard amino acids; used to order matrix indices, dereferenced by a lookup
     amino_acids = "ARNDCQEGHILKMFPSTWYV" |> collect 
@@ -172,7 +204,8 @@ function create_coupling_table()
         for j in 1:n
             # coupling_matrix[i, j] represents the probability of successfully adding amino acid i when the previous amino acid (context) is j.
             # For now, using flat probabilities (context-independent)
-            coupling_matrix[i, j] = get(contextfree_couplings, amino_acids[i], 0.90)  # Default to 0.90 if not in dict
+            #coupling_matrix[i, j] = get(contextfree_couplings, amino_acids[i], 0.90)  # Default to 0.90 if not in dict
+            coupling_matrix[i, j] = get(contextfree_couplings_Young1990, amino_acids[i], 0.90)^0.5  # Default to 0.90 if not in dict
         end
     end
     
@@ -193,9 +226,11 @@ if abspath(PROGRAM_FILE) == @__FILE__
     
     # Test peptide
     KB09 = "ILKKLKKLAAPAL"
+    KB11 = "LILKPLKLLKCLKKL"
+    testpep=KB11
 
     # Predict synthesis
-    result = predict_synthesis(KB09, coupling_table, num_simulations=1_000_000)
+    result = predict_synthesis(testpep, coupling_table, num_simulations=10_000_000)
     println("\nTotal unique sequences generated: $(length(result))")
 end 
 
