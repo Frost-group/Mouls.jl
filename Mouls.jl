@@ -167,8 +167,8 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
                          num_simulations::Int=1_000_000)
     
     println("Predicting synthesis for peptide: $peptide")
-    println("Original peptide mass: $(round(calculate_peptide_mass(peptide), digits=2)) Da")
-    println("Simulations: $num_simulations")
+    println("Target peptide mass: $(round(calculate_peptide_mass(peptide), digits=2)) Da")
+    println("MC Synthesis Simulations: $num_simulations")
     
     # Calculate histogram
     histogram = calculate_histogram(peptide, coupling_table, 
@@ -213,11 +213,13 @@ if abspath(PROGRAM_FILE) == @__FILE__
     
     # Test peptide
     KB09 = "ILKKLKKLAAPAL"
+    KB10 = "IKFLSLKLGLSLKK"
     KB11 = "LILKPLKLLKCLKKL"
-    testpep=KB11
-
-    # Predict synthesis
-    result = predict_synthesis(testpep, coupling_table, num_simulations=10_000_000)
-    println("\nTotal unique sequences generated: $(length(result))")
+    
+    # Predict synthesis; MC run
+    for pep in [KB09,KB10,KB11]
+        result = predict_synthesis(pep, coupling_table, num_simulations=10_000_000)
+        println("\nTotal unique sequences generated: $(length(result))")
+    end
 end 
 
