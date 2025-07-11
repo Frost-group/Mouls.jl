@@ -141,16 +141,27 @@ Generate a single synthesised sequence based on coupling probabilities.
 function generate_synthesised_sequence(peptide::String, coupling_table::CouplingTable)
     result = Char[]
     
-    for (i, aa) in enumerate(peptide |> reverse) # reverse for N-to-C actual synthesis order
+    synth_order = reverse(peptide) # N-to-C order; how our synthesiser runs
+
+    for (i, aa) in enumerate(synth_order) 
+        if i==1 # always add the first aa; avoids issue with i-1 index
+            push!(result, aa) 
+            continue 
+        end
         
-        # TRUNCATION
-        if rand()>1.0-i*0.001 # from Young1990, about a 1% chance of 'incomplete' with each additional aa
+        # TRUNCATION:
+        # Young1990, about a 1% chance of 'incomplete' with each additional aa
+        if rand()>1.0-i*0.001 
             break
         end
 
         # COUPLING EFFICIENCY
-        if rand() < get_coupling_prob(coupling_table, aa, aa)
-            push!(result, aa) # coupling successful!
+        # tables (potentially) context-dependent 
+        # (i.e. carboxylic given amine you are adding onto)
+        amine_aa=synth_order[i-1]
+        carboxyl_aa=synth_order[i]
+        if rand() < get_coupling_prob(coupling_table, amine_aa, carboxyl_aa)
+            push!(result, carboxyl_aa) # coupling successful!
         end
     end
     
@@ -212,12 +223,12 @@ if abspath(PROGRAM_FILE) == @__FILE__
     println(coupling_table)
     
     # Test peptide
-    KB09 = "ILKKLKKLAAPAL"
+    KB08 = "IVLPKLKCLLIK"
     KB10 = "IKFLSLKLGLSLKK"
     KB11 = "LILKPLKLLKCLKKL"
     
     # Predict synthesis; MC run
-    for pep in [KB09,KB10,KB11]
+    for pep in [KB08,KB10,KB11]
         result = predict_synthesis(pep, coupling_table, num_simulations=10_000_000)
         println("\nTotal unique sequences generated: $(length(result))")
     end
