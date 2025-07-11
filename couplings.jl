@@ -1,8 +1,58 @@
+# Context free coupling probability 
+contextfree_couplings = Dict(
+    'A' => 0.99,  # Alanine
+    'R' => 0.98,  # Arginine
+    'N' => 0.98,  # Asparagine
+    'D' => 0.98,  # Aspartic acid
+    'C' => 0.95,  # Cysteine - oxidation ?
+    'Q' => 0.98,  # Glutamine
+    'E' => 0.98,  # Glutamic acid
+    'G' => 0.99,  # Glycine
+    'H' => 0.97,  # Histidine
+    'I' => 0.99,  # Isoleucine
+    'L' => 0.99,  # Leucine
+    'K' => 0.98,  # Lysine
+    'M' => 0.96,  # Methionine - oxidation sensitive ?
+    'F' => 0.99,  # Phenylalanine
+    'P' => 0.92,  # Proline - ring strain ?
+    'S' => 0.99,  # Serine
+    'T' => 0.98,  # Threonine
+    'W' => 0.95,  # Tryptophan - indole ring sensitive ?
+    'Y' => 0.98,  # Tyrosine - phenol group ?
+    'V' => 0.99   # Valine
+)
+
+# Young1990 - Figure 2; high incomplete
+contextfree_couplings_Young1990 = Dict(
+    'H' => 0.75,  # Histidine
+    'T' => 0.86,  # Threonine
+    'R' => 0.87,  # Arginine
+    'V' => 0.87,   # Valine
+    'I' => 0.87,  # Isoleucine
+    'Q' => 0.90,  # Glutamine
+    'Y' => 0.91,  # Tyrosine - phenol group ?
+    'N' => 0.92,  # Asparagine
+    'W' => 0.92,  # Tryptophan - indole ring sensitive ?
+    'E' => 0.92,  # Glutamic acid
+    'P' => 0.92,  # Proline - ring strain ?
+    'K' => 0.94,  # Lysine
+    'L' => 0.94,  # Leucine
+    'S' => 0.94,  # Serine
+    'F' => 0.94,  # Phenylalanine
+    'A' => 0.94,  # Alanine
+    'C' => 0.95,  # Cysteine - oxidation ?
+    'M' => 0.95,  # Methionine - oxidation sensitive ?
+    'D' => 0.97,  # Aspartic acid
+    'G' => 0.97  # Glycine
+)
+
+
+
 # Coupling data digitized from Young et al. (1990) Figure 2
 # Key: (amine, carboxyl), Value: (number_incomplete, total_number)
 # ND (not determined) entries are represented as `missing`
 
-const couplings = Dict{Tuple{Char,Char}, Union{Float64,Missing}}(
+const contextual_couplings_Young1990 = Dict{Tuple{Char,Char}, Union{Float64,Missing}}(
     # Q row
     ('Q', 'H') => 4/6,
     ('Q', 'T') => 7/20,
@@ -22,7 +72,7 @@ const couplings = Dict{Tuple{Char,Char}, Union{Float64,Missing}}(
     ('Q', 'A') => 8/19,
     ('Q', 'C') => 1/4,
     ('Q', 'M') => 0/1,
-    ('Q', 'D') => 4/2,
+    ('Q', 'D') => 4/12,
     ('Q', 'G') => 2/20,
     # L row
     ('L', 'H') => 7/11,
@@ -424,4 +474,34 @@ const couplings = Dict{Tuple{Char,Char}, Union{Float64,Missing}}(
     ('P', 'D') => missing,
     ('P', 'G') => missing
 )
+
+
+function create_coupling_table()
+    # Standard amino acids; used to order matrix indices, dereferenced by a lookup
+    amino_acids = "ARNDCQEGHILKMFPSTWYV" |> collect 
+    n = length(amino_acids)
+    coupling_matrix = zeros(n, n)
+
+    # Set coupling probabilities based on amino acid synthesis difficulty
+    for i in 1:n
+        for j in 1:n
+            # coupling_matrix[i, j] represents the probability of successfully adding amino acid i when the previous amino acid (context) is j.
+            # For now, using flat probabilities (context-independent)
+            #coupling_matrix[i, j] = get(contextfree_couplings, amino_acids[i], 0.90)  # Default to 0.90 if not in dict
+
+            #coupling_matrix[i, j] = get(contextfree_couplings_Young1990, amino_acids[i], 0.90)^0.5  # Default to 0.90 if not in dict
+            
+            raw_value = get(contextual_couplings_Young1990, (amino_acids[i], amino_acids[j]), 0.5)  # Default to 0.50 if not in dict
+            ismissing(raw_value) ? raw_value = 0.5 : raw_value = raw_value
+            isfinite(raw_value) ? raw_value = raw_value : raw_value = 0.5
+            
+            @printf("raw coupling_matrix[%d %s, %d %s] = %f\n", i, amino_acids[i], j, amino_acids[j], raw_value)
+            
+            coupling_matrix[i, j] = 1-raw_value*0.02
+        end
+    end
+    
+    return CouplingTable(coupling_matrix, amino_acids)
+end
+
 
