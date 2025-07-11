@@ -497,7 +497,7 @@ function create_coupling_table()
             
             # @printf("raw coupling_matrix[%d %s, %d %s] = %f\n", i, amino_acids[i], j, amino_acids[j], raw_value)
             
-            coupling_matrix[i, j] = 1-raw_value*0.05
+            coupling_matrix[i, j] = 1-raw_value*0.1
         end
     end
     

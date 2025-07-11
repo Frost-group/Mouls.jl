@@ -228,7 +228,9 @@ if abspath(PROGRAM_FILE) == @__FILE__
     KB11 = "LILKPLKLLKCLKKL"
     
     # Predict synthesis; MC run
-    for pep in [KB08,KB10,KB11]
+    for name in [:KB08, :KB10, :KB11]
+        pep = eval(name)
+        println("\nSimulating peptide: $name")
         result = predict_synthesis(pep, coupling_table, num_simulations=10_000_000)
         println("\nTotal unique sequences generated: $(length(result))")
     end
