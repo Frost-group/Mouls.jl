@@ -495,7 +495,7 @@ function create_coupling_table()
             ismissing(raw_value) ? raw_value = 0.5 : raw_value = raw_value
             isfinite(raw_value) ? raw_value = raw_value : raw_value = 0.5
             
-            @printf("raw coupling_matrix[%d %s, %d %s] = %f\n", i, amino_acids[i], j, amino_acids[j], raw_value)
+            # @printf("raw coupling_matrix[%d %s, %d %s] = %f\n", i, amino_acids[i], j, amino_acids[j], raw_value)
             
             coupling_matrix[i, j] = 1-raw_value*0.02
         end
