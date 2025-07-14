@@ -226,9 +226,16 @@ if abspath(PROGRAM_FILE) == @__FILE__
     KB08 = "IVLPKLKCLLIK"
     KB10 = "IKFLSLKLGLSLKK"
     KB11 = "LILKPLKLLKCLKKL"
-    
+
+    ID441  = "WIWLKLLKKLLKL"
+    ID1197 = "KVLLLLCKLKKK"
+    ID803  = "WLILPKLKCLLKKL"
+    KB17   = "FRFPRIGIIILAVKK"
+    ID1181 = "VLKCLCLKLKKKLL"
+    ID97   = "VFFWLLCKLKKKLL"
+
     # Predict synthesis; MC run
-    for name in [:KB08, :KB10, :KB11]
+    for name in [:ID441,:ID1197,:ID803,:KB17,:ID1181,:ID97] #[:KB08, :KB10, :KB11]
         pep = eval(name)
         println("\nSimulating peptide: $name")
         result = predict_synthesis(pep, coupling_table, num_simulations=10_000_000)
