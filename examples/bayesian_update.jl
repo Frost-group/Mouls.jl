@@ -1,4 +1,5 @@
 # Example workflow while developing the Bayesian (Sort of) update code for coupling tables.
+#   Don't ask me why the nautical theme; I was just feeling it.
 
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
@@ -42,7 +43,9 @@ obs2 = create_synthetic_observation(
 println("\nSynthetic Observation 2:")
 println(obs2)
 
-# Synthetic observation: "AAAAAAAA" synthesized with 100% yield (all attempts correct)
+# Synthetic observation: "AAAAAAAA" synthesized with 100% yield, 
+# to drive [A,A] entry, while debugging the optimiser
+# NB: Don't use Nealder-Mead for 400 parameters. It don't work. 
 println("\nSynthetic Observation 3 (100% yield):")
 obs3 = SynthesisObservation(
     "AAAAAAAA",
