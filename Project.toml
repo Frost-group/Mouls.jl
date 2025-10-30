@@ -1,8 +1,20 @@
+name = "Mouls"
+uuid = "a8f8e8e8-1234-5678-9abc-def012345678"
+authors = ["Your Name <your.email@example.com>"]
+version = "0.1.0"
+
 [deps]
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-julia = "1.6" 
+julia = "1.6"
+Distributions = "0.25"
+Optim = "1"
+JSON = "0.21"
+ArgParse = "1" 

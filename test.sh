@@ -1,2 +1,3 @@
 # sea life defaults... all valid peptides!
-julia --project=./ Mouls.jl CRANKYMEGAFISHSTINGRAY MARLIN LIMPIT SHARK KELP SEAL EEL
+julia --project=./ scripts/predict_synthesis.jl CRANKYMEGAFISHSTINGRAY MARLIN LIMPIT SHARK KELP SEAL EEL
+

@@ -1,7 +1,3 @@
-using Statistics
-using LinearAlgebra
-
-
 """
     Mouls
 
@@ -11,8 +7,9 @@ module Mouls
 
 using Distributions
 using Printf
+using Statistics
+using LinearAlgebra
 
-# Amino acid mass lookup table (monoisotopic masses in Da)
 const AMINO_ACID_MASSES = Dict{Char, Float64}(
     'A' => 71.03711,  # Alanine
     'R' => 156.10111, # Arginine
@@ -34,8 +31,6 @@ const AMINO_ACID_MASSES = Dict{Char, Float64}(
     'W' => 186.07931, # Tryptophan
     'Y' => 163.06333, # Tyrosine
     'V' => 99.06841,   # Valine
-
-    # Terminal groups
     'n' => 1.007825, # H+
     'c' => 17.00274 # OH-
 )
@@ -68,8 +63,8 @@ struct CouplingTable
     amino_acids::Vector{Char}
     
     function CouplingTable(matrix::Matrix{Float64}, amino_acids::Vector{Char})
-        @assert size(matrix, 1) == size(matrix, 2) == length(amino_acids) # gotta catch them all
-        @assert all(x -> 0 ≤ x ≤ 1, matrix) # probabilities, innit 
+        @assert size(matrix, 1) == size(matrix, 2) == length(amino_acids)
+        @assert all(x -> 0 ≤ x ≤ 1, matrix)
         new(matrix, amino_acids)
     end
 end
@@ -109,7 +104,9 @@ end
 
 include("couplings.jl")
 include("synthesis_data.jl")
-include("bayesian_update.jl")
+include("Bayesian_update.jl")
+
+export contextual_couplings_Young1990_raw
 
 export predict_synthesis, calculate_histogram, CouplingTable, calculate_peptide_mass, get_amino_acid_mass, get_coupling_prob
 export BayesianCouplingPrior, SynthesisObservation
@@ -128,13 +125,11 @@ Calculate expected histogram of sequences based on coupling table and synthesis 
 function calculate_histogram(peptide::String, coupling_table::CouplingTable; 
                            num_simulations::Int=1000)
     
-    # Initialize histogram
     sequence_counts = Dict{String, Int}()
     
     for _ in 1:num_simulations
-        # Generate synthesised sequence
         synthesised_sequence = generate_synthesised_sequence(peptide, coupling_table)
-        sequence_counts[synthesised_sequence] = get(sequence_counts, synthesised_sequence, 0) + 1 # uses get to set default 0 if not in dict
+        sequence_counts[synthesised_sequence] = get(sequence_counts, synthesised_sequence, 0) + 1
     end
     
     return sequence_counts
@@ -148,31 +143,26 @@ Generate a single synthesised sequence based on coupling probabilities.
 function generate_synthesised_sequence(peptide::String, coupling_table::CouplingTable)
     result = Char[]
     
-    synth_order = reverse(peptide) # N-to-C order; how our synthesiser runs
+    synth_order = reverse(peptide)
 
     for (i, aa) in enumerate(synth_order) 
-        if i==1 # always add the first aa; avoids issue with i-1 index
+        if i==1
             push!(result, aa) 
             continue 
         end
         
-        # TRUNCATION:
-        # Young1990, about a 1% chance of 'incomplete' with each additional aa
         if rand()>1.0-i*0.001 
             break
         end
 
-        # COUPLING EFFICIENCY
-        # tables (potentially) context-dependent 
-        # (i.e. carboxylic given amine you are adding onto)
-        amine_aa=synth_order[i-1]
-        carboxyl_aa=synth_order[i]
+        carboxyl_aa = synth_order[i-1]  # Previous aa (carboxyl end available for coupling)
+        amine_aa = synth_order[i]       # Current aa being added (amine end couples)
         if rand() < get_coupling_prob(coupling_table, amine_aa, carboxyl_aa)
-            push!(result, carboxyl_aa) # coupling successful!
+            push!(result, amine_aa)
         end
     end
     
-    return String(result) |> reverse # back to FASTA order
+    return String(result) |> reverse
 end
 
 """
@@ -188,15 +178,13 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
     println("Target peptide mass: $(round(calculate_peptide_mass(peptide), digits=2)) Da")
     println("MC Synthesis Simulations: $num_simulations")
     
-    # Calculate histogram
     histogram = calculate_histogram(peptide, coupling_table, 
                                   num_simulations=num_simulations)
     
-    # Sort by frequency (yield)
     sorted_sequences = sort(collect(histogram), by=x->x[2], rev=true)
     
     println("\nTop $top yields:")
-    println("Sequence\t\tCount\tProbability\tMass[inc. termini] (Da)\t2x\0.5x")
+    println("Sequence\t\tCount\tProbability\tMass[inc. termini] (Da)\t2x\t0.5x")
     println("-" ^ 65)
     
     total_count = sum(values(histogram))
@@ -215,39 +203,5 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
     return histogram
 end
 
-
 end # module
-
-using ArgParse
-if abspath(PROGRAM_FILE) == @__FILE__
-    using .Mouls
-    
-    s = ArgParseSettings(description="Monte Carlo prediction of peptide synthesis", version="0.0.1", add_version=true)
-    @add_arg_table! s begin
-        "peptides"
-            help = "Peptide sequence(s) to predict"
-            nargs = '+'
-            required = true
-        "--simulations", "-n"
-            help = "Number of MC simulations"
-            arg_type = Int
-            default = 1_000_000
-        "--coupling", "-c"
-            help = "Coupling table: contextfree_couplings, contextfree_couplings_Young1990, contextual_couplings_Young1990"
-            arg_type = String
-            default = "contextual_couplings_Young1990"
-        "--top"
-            help = "Number of top sequences to display"
-            arg_type = Int
-            default = 20
-    end
-    
-    args = parse_args(s)
-    coupling_table = Mouls.create_coupling_table(args["coupling"])
-    
-    for peptide in args["peptides"]
-        result = predict_synthesis(peptide, coupling_table, num_simulations=args["simulations"], top=args["top"])
-        println("\nTotal unique sequences: $(length(result))")
-    end
-end 
 
