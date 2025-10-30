@@ -476,7 +476,7 @@ const contextual_couplings_Young1990 = Dict{Tuple{Char,Char}, Union{Float64,Miss
 )
 
 
-function create_coupling_table()
+function create_coupling_table(table::String="contextual_couplings_Young1990")
     # Standard amino acids; used to order matrix indices, dereferenced by a lookup
     amino_acids = "ARNDCQEGHILKMFPSTWYV" |> collect 
     n = length(amino_acids)
@@ -486,18 +486,19 @@ function create_coupling_table()
     for i in 1:n
         for j in 1:n
             # coupling_matrix[i, j] represents the probability of successfully adding amino acid i when the previous amino acid (context) is j.
+            
+            if (table == "contextfree_couplings")
             # For now, using flat probabilities (context-independent)
-            #coupling_matrix[i, j] = get(contextfree_couplings, amino_acids[i], 0.90)  # Default to 0.90 if not in dict
-
-            #coupling_matrix[i, j] = get(contextfree_couplings_Young1990, amino_acids[i], 0.90)^0.5  # Default to 0.90 if not in dict
-            
-            raw_value = get(contextual_couplings_Young1990, (amino_acids[i], amino_acids[j]), 0.5)  # Default to 0.50 if not in dict
-            ismissing(raw_value) ? raw_value = 0.5 : raw_value = raw_value
-            isfinite(raw_value) ? raw_value = raw_value : raw_value = 0.5
-            
-            # @printf("raw coupling_matrix[%d %s, %d %s] = %f\n", i, amino_acids[i], j, amino_acids[j], raw_value)
-            
-            coupling_matrix[i, j] = 1-raw_value*0.1
+                coupling_matrix[i, j] = get(contextfree_couplings, amino_acids[i], 0.90)  # Default to 0.90 if not in dict
+            elseif (table == "contextfree_couplings_Young1990")
+                coupling_matrix[i, j] = get(contextfree_couplings_Young1990, amino_acids[i], 0.90)^0.5  # Default to 0.90 if not in dict
+            elseif (table == "contextual_couplings_Young1990")
+                raw_value = get(contextual_couplings_Young1990, (amino_acids[i], amino_acids[j]), 0.5)  # Default to 0.50 if not in dict
+                ismissing(raw_value) ? raw_value = 0.5 : raw_value = raw_value
+                isfinite(raw_value) ? raw_value = raw_value : raw_value = 0.5
+                
+                coupling_matrix[i, j] = 1-raw_value*0.1 # fudge results to make more likely to synthesise
+            end
         end
     end
     
