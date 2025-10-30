@@ -170,12 +170,12 @@ end
 
 """
     predict_synthesis(peptide::String, coupling_table::CouplingTable; 
-                     num_simulations::Int=1000)
+                     num_simulations::Int=1000, top::Int=20)
 
 Main function to predict synthesis of peptide sequence.
 """
 function predict_synthesis(peptide::String, coupling_table::CouplingTable; 
-                         num_simulations::Int=1_000_000)
+                         num_simulations::Int=1_000_000, top::Int=20)
     
     println("Predicting synthesis for peptide: $peptide")
     println("Target peptide mass: $(round(calculate_peptide_mass(peptide), digits=2)) Da")
@@ -188,20 +188,19 @@ function predict_synthesis(peptide::String, coupling_table::CouplingTable;
     # Sort by frequency (yield)
     sorted_sequences = sort(collect(histogram), by=x->x[2], rev=true)
     
-    println("\nTop 20 yields:")
-    println("Sequence\t\tCount\tProbability\tMass[inc. termini] (Da)")
+    println("\nTop $top yields:")
+    println("Sequence\t\tCount\tProbability\tMass[inc. termini] (Da)\t2x\0.5x")
     println("-" ^ 65)
     
     total_count = sum(values(histogram))
  
     total_prob = 0.0
-    for (sequence, count) in sorted_sequences[1:min(20, length(sorted_sequences))]
+    for (sequence, count) in sorted_sequences[1:min(top, length(sorted_sequences))]
         prob = count / total_count
         mass = calculate_peptide_mass(sequence, include_termini=true)
-        println("$(lpad(sequence,length(peptide)))\t\t$count\t$(round(prob, digits=4))\t$(round(mass, digits=2))")
+        @printf("%*s\t\t%d\t%.4f\t\t%.2f\t(%.2f,\t%.2f)\n", 
+                length(peptide), sequence, count, prob, mass, 2*mass, mass/2)
         total_prob += prob
-
-        
     end
 
     println("Total yield / probability of synthesis: $(round(total_prob, digits=4))")
@@ -212,34 +211,36 @@ end
 
 end # module
 
-# Example usage
+using ArgParse
 if abspath(PROGRAM_FILE) == @__FILE__
     using .Mouls
     
-    # Create example coupling table
-    coupling_table = Mouls.create_coupling_table()
+    s = ArgParseSettings(description="Monte Carlo prediction of peptide synthesis", version="0.0.1", add_version=true)
+    @add_arg_table! s begin
+        "peptides"
+            help = "Peptide sequence(s) to predict"
+            nargs = '+'
+            required = true
+        "--simulations", "-n"
+            help = "Number of MC simulations"
+            arg_type = Int
+            default = 1_000_000
+        "--coupling", "-c"
+            help = "Coupling table: contextfree_couplings, contextfree_couplings_Young1990, contextual_couplings_Young1990"
+            arg_type = String
+            default = "contextual_couplings_Young1990"
+        "--top"
+            help = "Number of top sequences to display"
+            arg_type = Int
+            default = 20
+    end
     
-    println("CouplingTable structure:")
-    println(coupling_table)
+    args = parse_args(s)
+    coupling_table = Mouls.create_coupling_table(args["coupling"])
     
-    # Test peptide
-    KB08 = "IVLPKLKCLLIK"
-    KB10 = "IKFLSLKLGLSLKK"
-    KB11 = "LILKPLKLLKCLKKL"
-
-    ID441  = "WIWLKLLKKLLKL"
-    ID1197 = "KVLLLLCKLKKK"
-    ID803  = "WLILPKLKCLLKKL"
-    KB17   = "FRFPRIGIIILAVKK"
-    ID1181 = "VLKCLCLKLKKKLL"
-    ID97   = "VFFWLLCKLKKKLL"
-
-    # Predict synthesis; MC run
-    for name in [:ID441,:ID1197,:ID803,:KB17,:ID1181,:ID97] #[:KB08, :KB10, :KB11]
-        pep = eval(name)
-        println("\nSimulating peptide: $name")
-        result = predict_synthesis(pep, coupling_table, num_simulations=10_000_000)
-        println("\nTotal unique sequences generated: $(length(result))")
+    for peptide in args["peptides"]
+        result = predict_synthesis(peptide, coupling_table, num_simulations=args["simulations"], top=args["top"])
+        println("\nTotal unique sequences: $(length(result))")
     end
 end 
 
