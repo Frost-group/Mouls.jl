@@ -31,11 +31,7 @@ function calculate_peptide_mass(sequence::String; include_termini::Bool=true)
     mass = 0.0
     
     for aa in sequence
-        if haskey(AMINO_ACID_MASSES, aa)
-            mass += AMINO_ACID_MASSES[aa]
-        else
-            error("Unknown amino acid: $aa")
-        end
+        mass += AMINO_ACID_MASSES[aa]
     end
     
     if include_termini
@@ -53,11 +49,13 @@ Structure to store amino acid coupling probabilities.
 struct CouplingTable
     matrix::Matrix{Float64}
     amino_acids::Vector{Char}
+    aa_to_index::Dict{Char, Int}
     
     function CouplingTable(matrix::Matrix{Float64}, amino_acids::Vector{Char})
         @assert size(matrix, 1) == size(matrix, 2) == length(amino_acids)
         @assert all(x -> 0 ≤ x ≤ 1, matrix)
-        new(matrix, amino_acids)
+        aa_to_index = Dict(aa => i for (i, aa) in enumerate(amino_acids))
+        new(matrix, amino_acids, aa_to_index)
     end
 end
 
@@ -84,14 +82,7 @@ end
 Get coupling probability between two amino acids.
 """
 function get_coupling_prob(coupling_table::CouplingTable, aa1::Char, aa2::Char)
-    i = findfirst(isequal(aa1), coupling_table.amino_acids)
-    j = findfirst(isequal(aa2), coupling_table.amino_acids)
-    
-    if isnothing(i) || isnothing(j)
-        return 0.0
-    end
-    
-    return coupling_table.matrix[i, j]
+    coupling_table.matrix[coupling_table.aa_to_index[aa1], coupling_table.aa_to_index[aa2]]
 end
 
 

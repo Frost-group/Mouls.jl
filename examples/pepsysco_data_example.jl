@@ -50,7 +50,7 @@ println("Use these observations with Bayesian inference:")
 
 posterior = update_posterior(
     prior,
-    observations[1:end],  # choose observations to include in optimisation: slows it down, obvs. 
+    observations[1:20],  # choose observations to include in optimisation: slows it down, obvs. 
     method=:map,
     num_likelihood_sims=200, # more or less linear wall-clock proport to this, once > 50
     max_iterations=50,
@@ -100,6 +100,11 @@ function exploresynthesis(peptide::String, prior_table::CouplingTable, updated_c
     end
 end
 
-exploresynthesis("FISH", prior_table, updated_coupling_table)
-exploresynthesis("SELLTPLGIDLDEW", prior_table, updated_coupling_table)
+for observation in [1,11] # 1 and 11 both have interesting sub peaks ; 11 lots of low Mw fragments
+    println("\n--- Observation $observation sequence: $(observations[observation].target_sequence) ---")
+    peptide = observations[observation].target_sequence
+    @show observations[observation].mass_histogram
+    exploresynthesis(peptide, prior_table, updated_coupling_table)
+end
+
 
