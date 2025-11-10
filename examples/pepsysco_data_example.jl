@@ -35,11 +35,11 @@ prior_table = from_bayesian_prior(prior)
 
 println("\n--- Testing Kernel Bandwidth Sensitivity (Pepsysco Data) ---")
 bandwidths = [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
-println("\nLog-likelihood vs. kernel bandwidth for Pepsysco data:")
+println("\nLog-likelihood vs. kernel bandwidth for Pepsysco data (1:100 only, for speed):")
 for bandwidth in bandwidths
 
     losses= [ 
-        compare_histograms(sequence_to_mass_histogram(observations[i].target_sequence, from_bayesian_prior(prior), 0.001, num_simulations=1000), observations[i].mass_histogram, bandwidth) for i in 1:length(observations)
+        compare_histograms(sequence_to_mass_histogram(observations[i].target_sequence, from_bayesian_prior(prior), 0.001, num_simulations=1000), observations[i].mass_histogram, bandwidth) for i in 1:100
     ]
     println("  $(lpad(bandwidth, 6)) Da: $(round(sum(losses), digits=2))")
 end
@@ -50,10 +50,10 @@ println("Use these observations with Bayesian inference:")
 
 posterior = update_posterior(
     prior,
-    observations[1:20],  # choose observations to include in optimisation: slows it down, obvs. 
+    observations[1:1000],  # choose observations to include in optimisation: slows it down, obvs. 
     method=:map,
     num_likelihood_sims=200, # more or less linear wall-clock proport to this, once > 50
-    max_iterations=50,
+    max_iterations=200,
     kernel_bandwidth=20.0 # Da, bandwidth for kernel density comparison in mass spec histograms
 )
 
