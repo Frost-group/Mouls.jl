@@ -109,15 +109,16 @@ end
 
 include("couplings.jl")
 include("synthesis_data.jl")
-include("bayesian_update.jl")
+include("Bayesian_update.jl")
 
-export predict_synthesis, calculate_histogram, CouplingTable, calculate_peptide_mass, get_amino_acid_mass, get_coupling_prob
-export BayesianCouplingPrior, SynthesisObservation
+export predict_synthesis, calculate_histogram, CouplingTable, calculate_peptide_mass, get_coupling_prob
+export BayesianCouplingPrior, AbstractObservation, SequenceObservation, MassSpecObservation
 export initialize_prior_from_coupling_table, update_posterior, from_bayesian_prior
-export load_synthesis_data_json, save_synthesis_data_json, create_synthetic_observation
+export create_synthetic_observation, create_synthetic_mass_observation
 export get_coupling_means, get_truncation_mean
 export create_coupling_table, validate_synthesis_observation, is_subsequence_of
-export calculate_histogram_with_truncation, compare_histograms, log_prior_density
+export calculate_histogram_with_truncation, sequence_to_mass_histogram
+export log_likelihood, log_prior_density
 
 """
     calculate_histogram(peptide::String, coupling_table::CouplingTable; 

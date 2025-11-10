@@ -1,3 +1,100 @@
+# couplings.jl: amino acid lookup, coupling data structures, coupling prob funct from Young1990
+
+const AMINO_ACID_MASSES = Dict{Char, Float64}(
+    'A' => 71.03711,  # Alanine
+    'R' => 156.10111, # Arginine
+    'N' => 114.04293, # Asparagine
+    'D' => 115.02694, # Aspartic acid
+    'C' => 103.00919, # Cysteine
+    'Q' => 128.05858, # Glutamine
+    'E' => 129.04259, # Glutamic acid
+    'G' => 57.02146,  # Glycine
+    'H' => 137.05891, # Histidine
+    'I' => 113.08406, # Isoleucine
+    'L' => 113.08406, # Leucine
+    'K' => 128.09496, # Lysine
+    'M' => 131.04049, # Methionine
+    'F' => 147.06841, # Phenylalanine
+    'P' => 97.05276,  # Proline
+    'S' => 87.03203,  # Serine
+    'T' => 101.04768, # Threonine
+    'W' => 186.07931, # Tryptophan
+    'Y' => 163.06333, # Tyrosine
+    'V' => 99.06841,   # Valine
+
+    'n' => 1.007825, # H+
+    'c' => 17.00274 # OH-
+    # I think Anna was also talking about 'sodium' adducts +23 amu, but not sure if that was just for LC/MS ?
+)
+
+function calculate_peptide_mass(sequence::String; include_termini::Bool=true)
+    mass = 0.0
+    
+    for aa in sequence
+        if haskey(AMINO_ACID_MASSES, aa)
+            mass += AMINO_ACID_MASSES[aa]
+        else
+            error("Unknown amino acid: $aa")
+        end
+    end
+    
+    if include_termini
+        mass += AMINO_ACID_MASSES['n'] + AMINO_ACID_MASSES['c']
+    end
+
+    return mass
+end
+
+"""
+    CouplingTable
+
+Structure to store amino acid coupling probabilities.
+"""
+struct CouplingTable
+    matrix::Matrix{Float64}
+    amino_acids::Vector{Char}
+    
+    function CouplingTable(matrix::Matrix{Float64}, amino_acids::Vector{Char})
+        @assert size(matrix, 1) == size(matrix, 2) == length(amino_acids)
+        @assert all(x -> 0 ≤ x ≤ 1, matrix)
+        new(matrix, amino_acids)
+    end
+end
+
+Base.show(io::IO, ct::CouplingTable) = begin
+    aas = ct.amino_acids
+    println(io, "CouplingTable (size $(length(aas))×$(length(aas)))")
+    print(io, "    ")
+    for aa in aas
+        print(io, rpad(aa, 6))
+    end
+    println(io)
+    for (i, aa) in enumerate(aas)
+        print(io, rpad(aa, 4))
+        for j in 1:length(aas)
+            print(io, @sprintf("%.3f ", ct.matrix[i, j]))
+        end
+        println(io)
+    end
+end
+
+"""
+    get_coupling_prob(coupling_table::CouplingTable, aa1::Char, aa2::Char)
+
+Get coupling probability between two amino acids.
+"""
+function get_coupling_prob(coupling_table::CouplingTable, aa1::Char, aa2::Char)
+    i = findfirst(isequal(aa1), coupling_table.amino_acids)
+    j = findfirst(isequal(aa2), coupling_table.amino_acids)
+    
+    if isnothing(i) || isnothing(j)
+        return 0.0
+    end
+    
+    return coupling_table.matrix[i, j]
+end
+
+
 # Context free coupling probability 
 #  These were totally made up by Jarv after chatting to Kam
 contextfree_couplings = Dict(

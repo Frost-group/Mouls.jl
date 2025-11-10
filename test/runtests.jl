@@ -11,14 +11,14 @@ using Statistics
         prior = initialize_prior_from_coupling_table(coupling_table, prior_strength=100.0)
         
         @test prior isa BayesianCouplingPrior
-        @test size(prior.coupling_alpha) == (20, 20)
-        @test size(prior.coupling_beta) == (20, 20)
-        @test prior.truncation_alpha > 0
-        @test prior.truncation_beta > 0
+        @test size(prior.coupling_α) == (20, 20)
+        @test size(prior.coupling_β) == (20, 20)
+        @test prior.truncation_α > 0
+        @test prior.truncation_β > 0
         @test length(prior.amino_acids) == 20
         
         # Verify scaling: α + β should equal prior_strength for all cells
-        @test mean(prior.coupling_alpha .+ prior.coupling_beta) ≈ 100.0
+        @test mean(prior.coupling_α .+ prior.coupling_β) ≈ 100.0
         
         coupling_means = get_coupling_means(prior)
         @test size(coupling_means) == (20, 20)
@@ -35,26 +35,26 @@ using Statistics
         
         # Test with different prior_strength values
         prior_weak = initialize_prior_from_coupling_table(coupling_table, prior_strength=10.0)
-        @test mean(prior_weak.coupling_alpha .+ prior_weak.coupling_beta) ≈ 10.0
+        @test mean(prior_weak.coupling_α .+ prior_weak.coupling_β) ≈ 10.0
         
         prior_strong = initialize_prior_from_coupling_table(coupling_table, prior_strength=1000.0)
-        @test mean(prior_strong.coupling_alpha .+ prior_strong.coupling_beta) ≈ 1000.0
+        @test mean(prior_strong.coupling_α .+ prior_strong.coupling_β) ≈ 1000.0
         
         # Verify proportions are preserved across different strengths
         for i in 1:20
             for j in 1:20
-                p_default = prior.coupling_alpha[i,j] / (prior.coupling_alpha[i,j] + prior.coupling_beta[i,j])
-                p_weak = prior_weak.coupling_alpha[i,j] / (prior_weak.coupling_alpha[i,j] + prior_weak.coupling_beta[i,j])
+                p_default = prior.coupling_α[i,j] / (prior.coupling_α[i,j] + prior.coupling_β[i,j])
+                p_weak = prior_weak.coupling_α[i,j] / (prior_weak.coupling_α[i,j] + prior_weak.coupling_β[i,j])
                 @test p_default ≈ p_weak atol=0.001
             end
         end
     end
     
-    @testset "SynthesisObservation creation and validation" begin
+    @testset "SequenceObservation creation and validation" begin
         histogram = Dict("ACDE" => 100, "ACD" => 50, "AC" => 20)
         total = 170
         
-        obs = SynthesisObservation(
+        obs = SequenceObservation(
             target_sequence="ACDE",
             observed_histogram=histogram,
             total_count=total
@@ -66,13 +66,13 @@ using Statistics
         
         @test validate_synthesis_observation(obs)
         
-        @test_throws AssertionError SynthesisObservation(
+        @test_throws AssertionError SequenceObservation(
             target_sequence="ACDE",
             observed_histogram=Dict("ACDE" => 100),
             total_count=200
         )
         
-        @test_throws AssertionError SynthesisObservation(
+        @test_throws AssertionError SequenceObservation(
             target_sequence="ACDE",
             observed_histogram=Dict("ACDE" => 100),
             total_count=0
@@ -100,7 +100,7 @@ using Statistics
             truncation_rate=0.001
         )
         
-        @test obs isa SynthesisObservation
+        @test obs isa SequenceObservation
         @test obs.target_sequence == "ACDE"
         @test obs.total_count == 100
         @test sum(values(obs.observed_histogram)) == 100
@@ -142,7 +142,7 @@ using Statistics
             truncation_rate=0.001
         )
         
-        log_lik = calculate_likelihood(prior, [obs], num_simulations=100)
+        log_lik = log_likelihood(prior, [obs], num_simulations=100)
         
         @test log_lik isa Float64
         @test isfinite(log_lik)
@@ -153,14 +153,14 @@ using Statistics
         pred = Dict("AAA" => 80, "AA" => 15, "A" => 5)
         obs = Dict("AAA" => 85, "AA" => 10, "A" => 5)
         
-        log_lik = compare_histograms(pred, obs, 100)
+        log_lik = compare_histograms(pred, obs)
         
         @test log_lik isa Float64
         @test isfinite(log_lik)
         @test log_lik < 0.0
         
         identical = Dict("AAA" => 100)
-        log_lik_perfect = compare_histograms(identical, identical, 100)
+        log_lik_perfect = compare_histograms(identical, identical)
         @test log_lik_perfect > log_lik
     end
     
@@ -211,48 +211,17 @@ using Statistics
         )
         
         @test posterior isa BayesianCouplingPrior
-        @test size(posterior.coupling_alpha) == (20, 20)
-        @test all(posterior.coupling_alpha .> 0)
-        @test all(posterior.coupling_beta .> 0)
-        @test posterior.truncation_alpha > 0
-        @test posterior.truncation_beta > 0
+        @test size(posterior.coupling_α) == (20, 20)
+        @test all(posterior.coupling_α .> 0)
+        @test all(posterior.coupling_β .> 0)
+        @test posterior.truncation_α > 0
+        @test posterior.truncation_β > 0
         
         posterior_coupling_means = get_coupling_means(posterior)
         @test all(0.0 .< posterior_coupling_means .< 1.0)
         
         updated_table = from_bayesian_prior(posterior)
         @test updated_table isa CouplingTable
-    end
-    
-    @testset "JSON save and load" begin
-        mktempdir() do tmpdir
-            filepath = joinpath(tmpdir, "test_data.json")
-            
-            obs1 = SynthesisObservation(
-                target_sequence="ACDE",
-                observed_histogram=Dict("ACDE" => 100, "ACD" => 50),
-                total_count=150
-            )
-            
-            obs2 = SynthesisObservation(
-                target_sequence="FGH",
-                observed_histogram=Dict("FGH" => 80, "FG" => 20),
-                total_count=100
-            )
-            
-            observations = [obs1, obs2]
-            save_synthesis_data_json(observations, filepath)
-            
-            @test isfile(filepath)
-            
-            loaded_obs = load_synthesis_data_json(filepath)
-            
-            @test length(loaded_obs) == 2
-            @test loaded_obs[1].target_sequence == "ACDE"
-            @test loaded_obs[1].total_count == 150
-            @test loaded_obs[2].target_sequence == "FGH"
-            @test loaded_obs[2].total_count == 100
-        end
     end
     
 end

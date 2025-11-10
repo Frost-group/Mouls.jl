@@ -47,14 +47,14 @@ println(obs2)
 # to drive [A,A] entry, while debugging the optimiser
 # NB: Don't use Nealder-Mead for 400 parameters. It don't work. 
 println("\nSynthetic Observation 3 (100% yield):")
-obs3 = SynthesisObservation(
+obs3 = SequenceObservation(
     "AAAAAAAA",
     Dict("AAAAAAAA" => 500), # All attempts resulted in correct product
     500
 )
 println(obs3)
 
-obs4 = SynthesisObservation(
+obs4 = SequenceObservation(
     "CRANKYMEGAFISHSTINGRAY",
     Dict("CRANKYMEGAFISHSTINGRAY" => 500),
     500
@@ -120,14 +120,6 @@ for peptide in ["CRANKYMEGAFISHSTINGRAY", "FISH"]
     end
 
 end
-
-println("\n7. Save observations to JSON for later use")
-save_synthesis_data_json([obs1, obs2, obs3], "example_observations.json")
-println("Saved observations to example_observations.json")
-
-println("\nLoading observations from JSON...")
-loaded_obs = load_synthesis_data_json("example_observations.json")
-println("Loaded $(length(loaded_obs)) observations")
 
 println("\n" * "="^70)
 println("Example workflow complete!")
